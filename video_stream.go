@@ -4,15 +4,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 )
 
 type VideoStream struct {
 	filename string
 	frameNum int
-	file *os.File
+	file     *os.File
 }
 
-func(s *VideoStream) videoStream(filename string){
+func (s *VideoStream) videoStream(filename string) {
 	s.filename = filename
 	var err error
 	s.file, err = os.Open(filename) // For read access.
@@ -23,8 +24,7 @@ func(s *VideoStream) videoStream(filename string){
 	s.frameNum = 0
 }
 
-
-func(s *VideoStream) nextFrame() []byte {
+func (s *VideoStream) nextFrame() []byte {
 	data := make([]byte, 5)
 	count, err := s.file.Read(data)
 	if err != nil {
@@ -33,19 +33,20 @@ func(s *VideoStream) nextFrame() []byte {
 	}
 	fmt.Println("Here")
 	fmt.Printf("read %d bytes: %q\n", count, data[:count])
-	data_int := (int64(data[0]) - 48) * 10000 + (int64(data[1]) - 48) * 1000 + (int64(data[2]) - 48) * 100 + (int64(data[3]) - 48) * 10 + (int64(data[4]) - 48)
+	data_int := (int64(data[0])-48)*10000 + (int64(data[1])-48)*1000 + (int64(data[2])-48)*100 + (int64(data[3])-48)*10 + (int64(data[4]) - 48)
 	final_data_int := data_int
 	frame_length := final_data_int
 	frame := make([]byte, frame_length)
 	count, err = s.file.Read(frame)
 	if err != nil {
 		log.Fatal(err)
+		return nil
 	}
-	s.frameNum +=1
-	fmt.Println('-'*10, "\nNext Frame (#", string(s.frameNum), ") length:", string(frame_length), "\n", '-'*10)
+	s.frameNum += 1
+	fmt.Println('-'*10, "\nNext Frame (#", strconv.Itoa(s.frameNum), ") length:", strconv.Itoa(int(frame_length)), "\n", '-'*10)
 	return frame
 }
 
-func(s *VideoStream) frameNbr() int{
+func (s *VideoStream) frameNbr() int {
 	return s.frameNum
 }
