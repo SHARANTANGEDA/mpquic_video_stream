@@ -69,12 +69,51 @@ func (cw *ClientWorker) clientWorker(win *gtk.Window, serverAddr string, serverP
 	cw.requestSent = -1
 	cw.teardownAcked = 0
 	cw.win = win
+	cw.createWidgets()
 	cw.connectToServer()
 	cw.frameNbr = 0
 	cw.prevImage = nil
 	cw.image = nil
 	cw.setupMovie()
+	time.Sleep(2 * time.Second)
 	cw.playMovie()
+}
+
+func (cw *ClientWorker) createWidgets() {
+	cw.mainBox, _ = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
+	setup, err := gtk.ButtonNew()
+	if err != nil {
+		log.Fatal("Unable to create SetupBtn:", err)
+	}
+	setup.SetLabel("Setup")
+	setup.Connect("clicked", cw.setupMovie)
+
+	start, err := gtk.ButtonNew()
+	if err != nil {
+		log.Fatal("Unable to create PlayBtn:", err)
+	}
+	start.SetLabel("Play")
+	start.Connect("clicked", cw.playMovie)
+
+	pause, err := gtk.ButtonNew()
+	if err != nil {
+		log.Fatal("Unable to create PauseBtn:", err)
+	}
+	pause.SetLabel("Pause")
+	pause.Connect("clicked", cw.pauseMovie)
+
+	teardown, err := gtk.ButtonNew()
+	if err != nil {
+		log.Fatal("Unable to create TeardownBtn:", err)
+	}
+	teardown.SetLabel("Teardown")
+	teardown.Connect("clicked", cw.exitClient)
+	cw.win.Add(cw.mainBox)
+	cw.mainBox.PackStart(setup, false, false, 0)
+	cw.mainBox.PackStart(start, false, false, 0)
+	cw.mainBox.PackStart(pause, false, false, 0)
+	cw.mainBox.PackStart(teardown, false, false, 0)
+
 }
 
 func (cw *ClientWorker) setupMovie() {
@@ -237,22 +276,39 @@ func (cw *ClientWorker) connectToServer() {
 }
 
 func (cw *ClientWorker) sendRtspRequest(requestCode int) {
-	go cw.recvRtspReply()
-	fmt.Println("Recv Rtsp Reply called")
-	cw.rtspSeq = 1
-	request := "SETUP " + cw.filename + "\n" + strconv.Itoa(cw.rtspSeq) + "\n" + " RTSP/1.0 RTP/UDP " + strconv.Itoa(cw.rtpPort)
-	writeLn, err := cw.rtspSocket.Write([]byte(request))
-	if err != nil {
-		fmt.Println("Error in Rtsp Socket write method", writeLn)
-		fmt.Println(err)
-		os.Exit(1)
+	if requestCode == SETUP && cw.state == INIT {
+		go cw.recvRtspReply()
+		fmt.Println("Recv Rtsp Reply called")
+		cw.rtspSeq = 1
+		request := "SETUP " + cw.filename + "\n" + strconv.Itoa(cw.rtspSeq) + "\n" + " RTSP/1.0 RTP/UDP " + strconv.Itoa(cw.rtpPort)
+		writeLn, err := cw.rtspSocket.Write([]byte(request))
+		if err != nil {
+			fmt.Println("Error in Rtsp Socket write method", writeLn)
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		cw.requestSent = SETUP
+	} else if requestCode == PLAY && cw.state == READY {
+		cw.rtspSeq = cw.rtspSeq + 1
+		request := "PLAY " + "\n" + strconv.Itoa(cw.rtspSeq)
+		cw.rtspSocket.Write([]byte(request))
+		fmt.Println("-", "\nPLAY request sent to Server...\n", "-")
+		cw.requestSent = PLAY
+	} else if requestCode == PAUSE && cw.state == PLAYING {
+		cw.rtspSeq = cw.rtspSeq + 1
+		request := "PAUSE " + "\n" + strconv.Itoa(cw.rtspSeq)
+		cw.rtspSocket.Write([]byte(request))
+		fmt.Println("-", "\nPAUSE request sent to Server...\n", "-")
+		cw.requestSent = PAUSE
+	} else if requestCode == TEARDOWN && !(cw.state == INIT) {
+		cw.rtspSeq = cw.rtspSeq + 1
+		request := "TEARDOWN " + "\n" + strconv.Itoa(cw.rtspSeq)
+		cw.rtspSocket.Write([]byte(request))
+		fmt.Println("-", "\nTEARDOWN request sent to Server...\n", "-")
+		cw.requestSent = TEARDOWN
+	} else {
+		return
 	}
-	cw.requestSent = SETUP
-	cw.rtspSeq = cw.rtspSeq + 1
-	request := "PLAY " + "\n" + strconv.Itoa(cw.rtspSeq)
-	cw.rtspSocket.Write([]byte(request))
-	fmt.Println("-", "\nPLAY request sent to Server...\n", "-")
-	cw.requestSent = PLAY
 }
 
 func (cw *ClientWorker) recvRtspReply() {
@@ -292,12 +348,20 @@ func (cw *ClientWorker) parseRtspReply(data string) {
 		if cw.sessionId == session {
 			temp, _ := strconv.Atoi(strings.Split(lines[0], " ")[1])
 			if temp == 200 {
-				fmt.Println("Updating RTSP state...")
-				cw.state = READY
-				fmt.Println("Setting Up RtpPort for Video Stream")
-				cw.openRtpPort()
-				cw.state = PLAYING
-				fmt.Println("--", "\nClient is PLAYING...\n", "--", cw.state)
+				if cw.requestSent == SETUP {
+					fmt.Println("Updating RTSP state...")
+					cw.state = READY
+					fmt.Println("Setting Up RtpPort for Video Stream")
+					cw.openRtpPort()
+				} else if cw.requestSent == PLAY {
+					cw.state = PLAYING
+					fmt.Println("--", "\nClient is PLAYING...\n", "--", cw.state)
+				} else if cw.requestSent == PAUSE {
+					cw.state = READY
+					cw.event.Add(1)
+				} else if cw.requestSent == TEARDOWN {
+					cw.teardownAcked = 1
+				}
 			}
 		}
 	}

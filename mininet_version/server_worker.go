@@ -102,41 +102,64 @@ func (ser *ServerWorker) processRtspRequest(data string) {
 	request := strings.Split(data, "\n")
 	line1 := strings.Split(request[0], " ")
 	fmt.Println("Process Request", request[0], "SEP", request[1:], "SEP", request[1])
-	var _ int
+	var requestType int
+
 	if line1[0] == "SETUP" {
 		fmt.Println("RECD", line1[0], line1)
-		_ = 11
+		requestType = 11
 	} else if line1[0] == "PLAY" {
-		_ = 12
+		requestType = 12
 	} else if line1[0] == "PAUSE" {
-		_ = 13
+		requestType = 13
 	} else if line1[0] == "TEARDOWN" {
-		_ = 14
+		requestType = 14
 	}
 	filename := line1[1]
 	seq := strings.Split(request[1], " ")
+	if requestType == SETUP {
+		if ser.state == INIT {
+			fmt.Println("SETUP Request received")
+			ser.clientInfo.videoStream.videoStream(filename)
+			ser.state = READY
+			//except IOError:
+			//	self.replyRtsp(self.FILE_NOT_FOUND_404, seq[1])
+			go ser.createQUICClient()
+			ser.clientInfo.session = rand.Intn(999999-100000) + 100000
+			fmt.Println("Int For Session", ser.clientInfo.session)
+			ser.replyRtsp(OK_200, seq[0])
+			fmt.Println("sequenceNum is ", seq[0])
+			ser.clientInfo.rtpPort = strings.Split(request[2], " ")[3]
+			fmt.Println("--", "\nrtpPort is :"+ser.clientInfo.rtpPort, "\n", "--")
+			fmt.Println("filename is ", filename)
+		}
+	} else if requestType == PLAY {
+		if ser.state == READY {
+			fmt.Println('-'*60, "\nPLAY Request Received\n", '-'*60)
+			ser.state = PLAYING
 
-	fmt.Println("SETUP Request received")
-	ser.clientInfo.videoStream.videoStream(filename)
-	ser.state = READY
-	//except IOError:
-	//	self.replyRtsp(self.FILE_NOT_FOUND_404, seq[1])
-	go ser.createQUICClient()
-	ser.clientInfo.session = rand.Intn(999999-100000) + 100000
-	fmt.Println("Int For Session", ser.clientInfo.session)
-	ser.replyRtsp(OK_200, seq[0])
-	fmt.Println("sequenceNum is ", seq[0])
-	ser.clientInfo.rtpPort = strings.Split(request[2], " ")[3]
-	fmt.Println("--", "\nrtpPort is :"+ser.clientInfo.rtpPort, "\n", "--")
-	fmt.Println("filename is ", filename)
-	fmt.Println('-'*60, "\nPLAY Request Received\n", '-'*60)
-	ser.state = PLAYING
+			ser.replyRtsp(OK_200, seq[0])
+			fmt.Println("-", "\nSequence Number (", seq[0], ")\nReplied to client\n", "-")
+			//ser.clientInfo.event.Add(1)
+			//defer ser.clientInfo.event.Done()
+			go ser.sendRtp()
+		} else if ser.state == PAUSE {
+			fmt.Println('-'*60, "\nRESUME Request Received\n", '-'*60)
+			ser.state = PLAYING
+		}
+	} else if requestType == PAUSE {
+		if ser.state == PLAYING {
+			fmt.Println('-'*60, "\nPAUSE Request Received\n", '-'*60)
+			ser.state = READY
 
-	ser.replyRtsp(OK_200, seq[0])
-	fmt.Println("-", "\nSequence Number (", seq[0], ")\nReplied to client\n", "-")
-	//ser.clientInfo.event.Add(1)
-	//defer ser.clientInfo.event.Done()
-	go ser.sendRtp()
+			ser.clientInfo.event.Add(1)
+			ser.replyRtsp(OK_200, seq[0])
+		}
+	} else if requestType == TEARDOWN {
+		fmt.Println('-'*60, "\nTEARDOWN Request Received\n", '-'*60)
+		ser.clientInfo.event.Add(1)
+		ser.replyRtsp(OK_200, seq[0])
+		ser.clientInfo.rtpSocket.Close()
+	}
 }
 
 func (ser *ServerWorker) createQUICClient() {
