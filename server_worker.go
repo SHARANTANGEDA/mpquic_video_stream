@@ -211,7 +211,7 @@ func (ser *ServerWorker) sendRtp() {
 			}
 			//sendto(self.makeRtp(data, frameNumber),(self.clientInfo['rtspSocket'][1][0],port))
 			counter += 1
-			time.Sleep(1 * time.Second)
+			time.Sleep(10 * time.Millisecond)
 			fmt.Println(replyLen, ": REPL LEN")
 		}
 	}

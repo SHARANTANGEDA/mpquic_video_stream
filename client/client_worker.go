@@ -33,8 +33,6 @@ const CON_ERR_500 = 2
 const CACHE_FILE_NAME = "cache-"
 const CACHE_FILE_EXT = ".jpg"
 
-var mainBox *gtk.Box
-
 type ClientWorker struct {
 	state         int
 	counter       int
@@ -75,6 +73,7 @@ func (cw *ClientWorker) clientWorker(win *gtk.Window, serverAddr string, serverP
 	cw.connectToServer()
 	cw.frameNbr = 0
 	cw.prevImage = nil
+	cw.image = nil
 
 }
 
@@ -192,7 +191,7 @@ func (cw *ClientWorker) listenRtp() {
 		}
 		fmt.Println("Data recieved check", reqLen)
 		if reqLen > 0 {
-			cw.rtpPacket.decode(buf[:reqLen])
+			cw.rtpPacket.decode(buf)
 			fmt.Println("||Received Rtp Packet #", strconv.Itoa(cw.rtpPacket.seqNum()), "|| ")
 			var currFrameNbr int
 			if cw.frameNbr+1 != cw.rtpPacket.seqNum() {
@@ -223,20 +222,25 @@ func (cw *ClientWorker) writeFrame(data []byte) string {
 func (cw *ClientWorker) updateMovie(imageFile string) {
 	//imageBox, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 6)
 	var err error
-	cw.image, err = gtk.ImageNewFromFile(imageFile)
+	if cw.image == nil {
+		cw.image, err = gtk.ImageNewFromFile(imageFile)
+		cw.mainBox.PackStart(cw.image, false, false, 0)
+	} else {
+		cw.image.SetFromFile(imageFile)
+	}
+	cw.image.Show()
+	//image, err := gtk.ImageNewFromFile(imageFile)
 	if err != nil {
 		fmt.Println("Photo Error")
 	}
-	if cw.prevImage != nil {
-		fmt.Println("Remove Package")
-		cw.mainBox.PackEnd(cw.prevImage, false, false, 0)
-		cw.prevImage.Clear()
-		time.Sleep(1 * time.Second)
-	}
-	cw.mainBox.PackStart(cw.image, false, false, 0)
-	cw.image.Show()
-
-	cw.prevImage = cw.image
+	//if cw.prevImage != nil {
+	//	fmt.Println("Remove Package")
+	//	cw.mainBox.PackEnd(cw.prevImage, false, false, 0)
+	//	cw.prevImage.Clear()
+	//}
+	//
+	time.Sleep(100 * time.Millisecond)
+	//cw.prevImage = image
 
 	//cw.win.Add(cw.mainBox)
 	//imagePixBuffer := image.GetPixbuf()
