@@ -126,6 +126,7 @@ func (cw *ClientWorker) setupMovie() {
 func (cw *ClientWorker) setupQuicServer() {
 	cfgServer := &quic.Config{}
 	tlsConfig := generateTLSConfig()
+	fmt.Println("CHECK: ", cw.rtpPort)
 	listener, err := quic.ListenAddr("0.0.0.0:3001", tlsConfig, cfgServer)
 	cw.rtpSocket, err = listener.Accept()
 	if err != nil {
