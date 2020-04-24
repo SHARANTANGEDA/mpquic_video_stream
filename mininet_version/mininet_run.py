@@ -62,7 +62,7 @@ def runExperiment():
 	
 	# you may want to start wireshark here and finish by typing exit
 	cli = CLI(net)
-	CLI.do_xterm(cli, 'h1 h2')
+	# CLI.do_xterm(cli, 'h1 h2')
 	h1.cmd('sudo bash server.sh &')
 	h2.cmd("sudo bash client.sh")
 	
