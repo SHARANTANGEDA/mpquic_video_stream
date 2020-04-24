@@ -73,7 +73,7 @@ func receiveData(conn net.Conn) ([]byte, int) {
 }
 
 func (ser *ServerWorker) run() {
-	go ser.recvRtspRequest()
+	ser.recvRtspRequest()
 	//cfgServer := &quic.Config{}
 	//tlsConfig := generateTLSConfig()
 	//listener, err := quic.ListenAddr("0.0.0.0:3001", tlsConfig, cfgServer)
@@ -166,7 +166,7 @@ func (ser *ServerWorker) createQUICClient() {
 	cfgClient := &quic.Config{}
 	tlsConfig := &tls.Config{InsecureSkipVerify: true}
 	var err error
-	ser.clientInfo.rtpSocket, err = quic.DialAddr("localhost:3001", tlsConfig, cfgClient)
+	ser.clientInfo.rtpSocket, err = quic.DialAddr("10.0.0.2:3001", tlsConfig, cfgClient)
 	if err != nil {
 		fmt.Println(err)
 	}
