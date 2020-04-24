@@ -50,7 +50,7 @@ type ClientWorker struct {
 	win           *gtk.Window
 	mainBox       *gtk.Box
 	event         sync.WaitGroup
-	rtspSocket    net.Conn
+	rtspSocket    quic.Session
 	rtpPacket     RtpPacket
 	cAddr         net.Addr
 	prevImage     *gtk.Image
@@ -254,17 +254,14 @@ func (cw *ClientWorker) updateMovie(imageFile string) {
 }
 
 func (cw *ClientWorker) connectToServer() {
-	l, err := net.ResolveTCPAddr("tcp", cw.serverAddr+":"+cw.serverPort)
+	cfgClient := &quic.Config{}
+	tlsConfig := &tls.Config{InsecureSkipVerify: true}
+	var err error
+	cw.rtspSocket, err = quic.DialAddr(cw.serverAddr+":"+cw.serverPort, tlsConfig, cfgClient)
 	if err != nil {
-		fmt.Println("Error listening:", err.Error())
-		os.Exit(1)
+		fmt.Println(err)
 	}
-	cw.rtspSocket, err = net.DialTCP("tcp", nil, l)
-	if err != nil {
-		println("Dial failed:", err.Error())
-		os.Exit(1)
-	}
-	fmt.Println("TCP Server connected")
+	fmt.Println("Connected")
 	//cfgClient := &quic.Config{}
 	//tlsConfig := &tls.Config{InsecureSkipVerify: true}
 	//session, err := quic.DialAddr("localhost:3001", tlsConfig, cfgClient)
@@ -281,7 +278,9 @@ func (cw *ClientWorker) sendRtspRequest(requestCode int) {
 		fmt.Println("Recv Rtsp Reply called")
 		cw.rtspSeq = 1
 		request := "SETUP " + cw.filename + "\n" + strconv.Itoa(cw.rtspSeq) + "\n" + " RTSP/1.0 RTP/UDP " + strconv.Itoa(cw.rtpPort)
-		writeLn, err := cw.rtspSocket.Write([]byte(request))
+		stream, err := cw.rtspSocket.OpenStreamSync()
+		fmt.Println("Stream opened")
+		writeLn, err := stream.Write([]byte(request))
 		if err != nil {
 			fmt.Println("Error in Rtsp Socket write method", writeLn)
 			fmt.Println(err)
@@ -291,19 +290,29 @@ func (cw *ClientWorker) sendRtspRequest(requestCode int) {
 	} else if requestCode == PLAY && cw.state == READY {
 		cw.rtspSeq = cw.rtspSeq + 1
 		request := "PLAY " + "\n" + strconv.Itoa(cw.rtspSeq)
-		cw.rtspSocket.Write([]byte(request))
+		stream, _ := cw.rtspSocket.OpenStreamSync()
+		fmt.Println("Stream opened")
+		writeLn, err := stream.Write([]byte(request))
+		fmt.Println("Stream opened", writeLn)
+		if err != nil {
+			fmt.Println("Error in Rtsp Socket write method", writeLn)
+			fmt.Println(err)
+			os.Exit(1)
+		}
 		fmt.Println("-", "\nPLAY request sent to Server...\n", "-")
 		cw.requestSent = PLAY
 	} else if requestCode == PAUSE && cw.state == PLAYING {
 		cw.rtspSeq = cw.rtspSeq + 1
 		request := "PAUSE " + "\n" + strconv.Itoa(cw.rtspSeq)
-		cw.rtspSocket.Write([]byte(request))
+		stream, _ := cw.rtspSocket.OpenStreamSync()
+		_, _ = stream.Write([]byte(request))
 		fmt.Println("-", "\nPAUSE request sent to Server...\n", "-")
 		cw.requestSent = PAUSE
 	} else if requestCode == TEARDOWN && !(cw.state == INIT) {
 		cw.rtspSeq = cw.rtspSeq + 1
 		request := "TEARDOWN " + "\n" + strconv.Itoa(cw.rtspSeq)
-		cw.rtspSocket.Write([]byte(request))
+		stream, _ := cw.rtspSocket.OpenStreamSync()
+		_, _ = stream.Write([]byte(request))
 		fmt.Println("-", "\nTEARDOWN request sent to Server...\n", "-")
 		cw.requestSent = TEARDOWN
 	} else {
@@ -314,7 +323,8 @@ func (cw *ClientWorker) sendRtspRequest(requestCode int) {
 func (cw *ClientWorker) recvRtspReply() {
 	for {
 		buf := make([]byte, 1024)
-		reply, err := cw.rtspSocket.Read(buf)
+		stream, err := cw.rtspSocket.AcceptStream()
+		reply, err := io.ReadAtLeast(stream, buf, 5)
 		if err != nil {
 			fmt.Println("Error in recvReply", err, reply)
 			os.Exit(1)

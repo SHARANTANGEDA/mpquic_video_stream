@@ -8,9 +8,9 @@ import (
 	"encoding/pem"
 	"fmt"
 	quic "github.com/lucas-clemente/quic-go"
+	"io"
 	"math/big"
 	"math/rand"
-	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -31,7 +31,7 @@ const CON_ERR_500 = 2
 
 type ServerWorker struct {
 	clientInfo struct {
-		rtspSocket  net.Conn
+		rtspSocket  quic.Session
 		videoStream VideoStream
 		session     int
 		rtpPort     string
@@ -42,7 +42,7 @@ type ServerWorker struct {
 	state int
 }
 
-func (ser *ServerWorker) serverWorker(rtspSoc net.Conn) {
+func (ser *ServerWorker) serverWorker(rtspSoc quic.Session) {
 	ser.state = INIT
 	ser.clientInfo.rtspSocket = rtspSoc
 
@@ -57,11 +57,12 @@ func (ser *ServerWorker) serverWorker(rtspSoc net.Conn) {
 	//socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 }
 
-func receiveData(conn net.Conn) ([]byte, int) {
+func receiveData(conn quic.Session) ([]byte, int) {
 	// Make a buffer to hold incoming data.
 	buf := make([]byte, 256)
 	// Read the incoming connection into the buffer.
-	readLen, err := conn.Read(buf)
+	stream, err := conn.AcceptStream()
+	readLen, err := io.ReadAtLeast(stream, buf, 5)
 	if err != nil {
 		fmt.Println("Error reading:", err.Error())
 		os.Exit(1)
@@ -238,7 +239,9 @@ func (ser *ServerWorker) replyRtsp(code int, seq string) {
 		reply := "RTSP/1.0 200 OK\nCSeq: " + seq + "\nSession: " + strconv.Itoa(ser.clientInfo.session)
 		b := []byte(reply)
 		fmt.Println("REPLY", reply, "BYTE LEN:", len(b))
-		replyLen, err := ser.clientInfo.rtspSocket.Write(b)
+		stream, err := ser.clientInfo.rtspSocket.OpenStreamSync()
+		fmt.Println("Here")
+		replyLen, err := stream.Write(b)
 
 		if err != nil {
 			fmt.Println("Error", replyLen)

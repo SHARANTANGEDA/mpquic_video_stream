@@ -270,7 +270,6 @@ func (cw *ClientWorker) connectToServer() {
 	//	println("Dial failed:", err.Error())
 	//	os.Exit(1)
 	//}
-	fmt.Println("TCP Server connected")
 	//cfgClient := &quic.Config{}
 	//tlsConfig := &tls.Config{InsecureSkipVerify: true}
 	//session, err := quic.DialAddr("localhost:3001", tlsConfig, cfgClient)
