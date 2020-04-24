@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"net"
+	quic "github.com/lucas-clemente/quic-go"
 	"os"
 )
 
@@ -10,22 +10,31 @@ const SERVER_IP = "0.0.0.0"
 const SERVER_PORT = "1060"
 
 func main() {
-	rtspSocket, err := net.Listen("tcp", SERVER_IP+":"+SERVER_PORT)
+	cfgServer := &quic.Config{}
+	tlsConfig := generateTLSConfig()
+	listener, err := quic.ListenAddr(SERVER_IP+":"+SERVER_PORT, tlsConfig, cfgServer)
 	if err != nil {
-		fmt.Println("Error listening:", err.Error())
-		os.Exit(1)
+		fmt.Println(err)
+		fmt.Println("There was an error in socket")
+		return
 	}
-	defer rtspSocket.Close()
+	fmt.Println("RTSP QUIC Connection has been established")
+	//rtspSocket, err := net.Listen("tcp", SERVER_IP+":"+SERVER_PORT)
+	//if err != nil {
+	//	fmt.Println("Error listening:", err.Error())
+	//	os.Exit(1)
+	//}
+	//defer rtspSocket.Close()
 	fmt.Println("Listening on " + SERVER_IP + ":" + SERVER_PORT)
 
 	for {
-		rtspSoc, err := rtspSocket.Accept()
-		if err!= nil {
+		rtspSocket, err := listener.Accept()
+		if err != nil {
 			fmt.Println("Error accepting: ", err.Error())
 			os.Exit(1)
 		}
 		var ser ServerWorker
-		ser.serverWorker(rtspSoc)
+		ser.serverWorker(rtspSocket)
 		ser.run()
 	}
 
