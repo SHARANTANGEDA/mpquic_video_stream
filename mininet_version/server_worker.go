@@ -167,6 +167,7 @@ func (ser *ServerWorker) processRtspRequest(data string) {
 func (ser *ServerWorker) createQUICClient() {
 	cfgClient := &quic.Config{
 		CreatePaths: true,
+		KeepAlive:   true,
 	}
 	tlsConfig := &tls.Config{InsecureSkipVerify: true}
 	var err error

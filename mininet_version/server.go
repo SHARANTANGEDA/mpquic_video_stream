@@ -10,9 +10,7 @@ const SERVER_IP = "0.0.0.0"
 const SERVER_PORT = "1060"
 
 func main() {
-	cfgServer := &quic.Config{
-		CreatePaths: true,
-	}
+	cfgServer := &quic.Config{}
 	tlsConfig := generateTLSConfig()
 	listener, err := quic.ListenAddr(SERVER_IP+":"+SERVER_PORT, tlsConfig, cfgServer)
 	if err != nil {

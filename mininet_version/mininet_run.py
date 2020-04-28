@@ -35,9 +35,9 @@ class StaticTopo(Topo):
 		h2 = self.addHost('h2')
 		s1 = self.addSwitch('s1')
 		s2 = self.addSwitch('s2')
-		self.addLink(h1, s1, bw=100, delay="40ms")
+		self.addLink(h1, s1, bw=100)
 		self.addLink(h2, s1, bw=100)
-		self.addLink(h1, s2, bw=100, delay="20ms")
+		self.addLink(h1, s2, bw=100)
 		self.addLink(h2, s2, bw=100)
 
 
@@ -62,7 +62,8 @@ def runExperiment():
 	
 	# you may want to start wireshark here and finish by typing exit
 	cli = CLI(net)
-	# CLI.do_xterm(cli, 'h1 h2')
+	CLI.do_xterm(cli, 'h1 h2')
+	CLI(net)
 	h1.cmd('sudo bash server.sh &')
 	h2.cmd("sudo bash client.sh")
 	

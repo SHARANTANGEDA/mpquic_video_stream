@@ -75,7 +75,8 @@ func (cw *ClientWorker) clientWorker(win *gtk.Window, serverAddr string, serverP
 	cw.prevImage = nil
 	cw.image = nil
 	cw.setupMovie()
-	time.Sleep(2 * time.Second)
+	fmt.Println("Setup Complete for ClientWorker")
+	time.Sleep(750 * time.Millisecond)
 	cw.playMovie()
 }
 
@@ -127,7 +128,7 @@ func (cw *ClientWorker) setupMovie() {
 
 func (cw *ClientWorker) setupQuicServer() {
 	cfgServer := &quic.Config{
-		CreatePaths: true,
+		KeepAlive: true,
 	}
 	tlsConfig := generateTLSConfig()
 	fmt.Println("CHECK: ", cw.rtpPort)
@@ -183,8 +184,11 @@ func (cw *ClientWorker) listenRtp() {
 		//		break
 		//	}
 		//}
+		fmt.Println("In Listen RTP before AcceptStream")
 		stream, err := cw.rtpSocket.AcceptStream()
+		fmt.Println("In Listen RTP after AcceptStream")
 		reqLen, err = io.ReadAtLeast(stream, buf, 15)
+		fmt.Println("In Listen RTP Read complete")
 		if err != nil {
 			fmt.Println("Didn`t receive data!")
 			//cw.event.Done()
@@ -258,15 +262,18 @@ func (cw *ClientWorker) updateMovie(imageFile string) {
 
 func (cw *ClientWorker) connectToServer() {
 	cfgClient := &quic.Config{
-		CreatePaths: true,
+		CreatePaths: false,
+		KeepAlive:   true,
 	}
 	tlsConfig := &tls.Config{InsecureSkipVerify: true}
+	//tlsConfig := generateTLSConfig()
 	var err error
 	cw.rtspSocket, err = quic.DialAddr(cw.serverAddr+":"+cw.serverPort, tlsConfig, cfgClient)
 	if err != nil {
 		fmt.Println(err)
+	} else {
+		fmt.Println("Connected")
 	}
-	fmt.Println("Connected")
 	//cfgClient := &quic.Config{}
 	//tlsConfig := &tls.Config{InsecureSkipVerify: true}
 	//session, err := quic.DialAddr("localhost:3001", tlsConfig, cfgClient)
