@@ -159,7 +159,8 @@ func (ser *ServerWorker) processRtspRequest(data string) {
 		fmt.Println('-'*60, "\nTEARDOWN Request Received\n", '-'*60)
 		ser.clientInfo.event.Add(1)
 		ser.replyRtsp(OK_200, seq[0])
-		ser.clientInfo.rtpSocket.Close()
+		var err error
+		ser.clientInfo.rtpSocket.Close(err)
 	}
 }
 

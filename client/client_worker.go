@@ -187,7 +187,8 @@ func (cw *ClientWorker) listenRtp() {
 			fmt.Println("Didn`t receive data!")
 			//cw.event.Done()
 			if cw.teardownAcked == 1 {
-				cw.rtpSocket.Close()
+				var err error
+				cw.rtpSocket.Close(err)
 				break
 			}
 			fmt.Println("Error reading:", err.Error())
@@ -349,7 +350,8 @@ func (cw *ClientWorker) recvRtspReply() {
 		}
 		fmt.Println("REPLY", reply)
 		if cw.requestSent == TEARDOWN {
-			cw.rtspSocket.Close()
+			var err error
+			cw.rtspSocket.Close(err)
 			break
 		}
 	}
