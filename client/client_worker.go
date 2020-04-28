@@ -124,7 +124,9 @@ func (cw *ClientWorker) setupMovie() {
 }
 
 func (cw *ClientWorker) setupQuicServer() {
-	cfgServer := &quic.Config{}
+	cfgServer := &quic.Config{
+		CreatePaths: true,
+	}
 	tlsConfig := generateTLSConfig()
 	fmt.Println("CHECK: ", cw.rtpPort)
 	listener, err := quic.ListenAddr("0.0.0.0:3001", tlsConfig, cfgServer)
@@ -252,7 +254,9 @@ func (cw *ClientWorker) updateMovie(imageFile string) {
 }
 
 func (cw *ClientWorker) connectToServer() {
-	cfgClient := &quic.Config{}
+	cfgClient := &quic.Config{
+		CreatePaths: true,
+	}
 	tlsConfig := &tls.Config{InsecureSkipVerify: true}
 	var err error
 	cw.rtspSocket, err = quic.DialAddr(cw.serverAddr+":"+cw.serverPort, tlsConfig, cfgClient)

@@ -164,7 +164,9 @@ func (ser *ServerWorker) processRtspRequest(data string) {
 }
 
 func (ser *ServerWorker) createQUICClient() {
-	cfgClient := &quic.Config{}
+	cfgClient := &quic.Config{
+		CreatePaths: true,
+	}
 	tlsConfig := &tls.Config{InsecureSkipVerify: true}
 	var err error
 	ser.clientInfo.rtpSocket, err = quic.DialAddr("localhost:3001", tlsConfig, cfgClient)
