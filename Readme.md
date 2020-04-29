@@ -3,7 +3,7 @@
 ## Follow the instructions in CoNEXT 17 mp-quic site (_MUST_)
 
 ## Make sure to change quic-go repo version to 0.11.2 before add remote of MP-QUIC
-## This setup uses mininet Native install on MPTCP kernel by progmp
+## This setup uses mininet Native install on MPTCP kernel by progmp and GoGTK for playing the video
 ### This application is for **`Go 1.14.2`**
 
 ### Instructions to run in mininet
