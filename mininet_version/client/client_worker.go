@@ -262,7 +262,7 @@ func (cw *ClientWorker) updateMovie(imageFile string) {
 
 func (cw *ClientWorker) connectToServer() {
 	cfgClient := &quic.Config{
-		CreatePaths: false,
+		CreatePaths: true,
 		KeepAlive:   true,
 	}
 	tlsConfig := &tls.Config{InsecureSkipVerify: true}
